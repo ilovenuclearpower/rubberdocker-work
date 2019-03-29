@@ -49,7 +49,18 @@ def create_container_root(image_name, image_dir, container_id, container_dir):
 
     # TODO: create directories for copy-on-write (uppperdir), overlay workdir,
     #       and a mount point
-
+    
+    container_cow_cw = _get_container_path(container_id, container_dir, "cow-rw")
+    container_cow_workdir = _get_container_path(container_id, container_dir, "cow_workdir")
+    container_rootfs = _get_container_path(container_id, container_dir, "rootfs")
+    
+    for d in (container_cow_workdir, container_cow_cw, container_rootfs):
+        if not os.path.exists(d):
+            os.mkdirs(d)
+    linux.mount('overlay', container_rootfs, 'overlay', MS_NODEV, "lowerdir={image_root} upperdir = {cow_rw} workdir = {cow_workdir}".format(
+        image_root = container_rootfs,
+        cow_rw = container_cow_cw,
+        cow_workdir = container_cow_workdir)
     # TODO: mount the overlay (HINT: use the MS_NODEV flag to mount)
 
     return container_root  # return the mountpoint for the mounted overlayfs

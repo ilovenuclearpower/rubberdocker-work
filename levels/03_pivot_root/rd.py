@@ -41,7 +41,7 @@ def create_container_root(image_name, image_dir, container_id, container_dir):
         os.makedirs(container_root)
 
     # TODO: uncomment (why?)
-    # linux.mount('tmpfs', container_root, 'tmpfs', 0, None)
+    linux.mount('tmpfs', container_root, 'tmpfs', 0, None)
 
     with tarfile.open(image_path) as t:
         # Fun fact: tar files may contain *nix devices! *facepalm*
@@ -88,24 +88,30 @@ def contain(command, image_name, image_dir, container_id, container_dir):
         image_name, image_dir, container_id, container_dir)
     print('Created a new root fs for our container: {}'.format(new_root))
 
-    # Create mounts (/proc, /sys, /dev) under new_root
-    linux.mount('proc', os.path.join(new_root, 'proc'), 'proc', 0, '')
-    linux.mount('sysfs', os.path.join(new_root, 'sys'), 'sysfs', 0, '')
-    linux.mount('tmpfs', os.path.join(new_root, 'dev'), 'tmpfs',
-                linux.MS_NOSUID | linux.MS_STRICTATIME, 'mode=755')
+    def _create_mounts(new_root):# Create mounts (/proc, /sys, /dev) under new_root
+        linux.mount('proc', os.path.join(new_root, 'proc'), 'proc', 0, '')
+        linux.mount('sysfs', os.path.join(new_root, 'sys'), 'sysfs', 0, '')
+        linux.mount('tmpfs', os.path.join(new_root, 'dev'), 'tmpfs',
+                    linux.MS_NOSUID | linux.MS_STRICTATIME, 'mode=755')
 
     # Add some basic devices
     devpts_path = os.path.join(new_root, 'dev', 'pts')
     if not os.path.exists(devpts_path):
         os.makedirs(devpts_path)
         linux.mount('devpts', devpts_path, 'devpts', 0, '')
-
+    
     makedev(os.path.join(new_root, 'dev'))
-
-    os.chroot(new_root)  # TODO: replace with pivot_root
+    
+    
+    _create_mounts(new_root)
+    old_root = os.path.join(new_root, 'old_root')
+    os.mkdirs(new_root)
+    os.pivot_root(new_root, 'old_root')  # TODO: replace with pivot_root
 
     os.chdir('/')
 
+    linux.umount2("/old_root", linux.MNT_DETACH)
+    linux.rm("/old_root")
     # TODO: umount2 old root (HINT: see MNT_DETACH in man 2 umount)
 
     os.execvp(command[0], command)
