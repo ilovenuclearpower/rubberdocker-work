@@ -31,14 +31,15 @@ def contain(command):
     # NOTE: command is an array (the first element is path/file, and the entire
     #       array is exec's args)
 
-    os._exit(0)  # TODO: remove this after adding exec
+    os.execvp(command[0], command)  # TODO: remove this after adding exec
 
 
 @cli.command(context_settings=dict(ignore_unknown_options=True,))
 @click.argument('Command', required=True, nargs=-1)
 def run(command):
     # TODO: replace this with fork()
-    #       (https://docs.python.org/2/library/os.html#os.fork)
+    #(https://docs.python.org/2/library/os.html#os.fork)
+    pid = os.fork()
     pid = 0
     if pid == 0:
         # This is the child, we'll try to do some containment here

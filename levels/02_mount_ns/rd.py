@@ -63,7 +63,15 @@ def contain(command, image_name, image_dir, container_id, container_dir):
     #           just for you!
     #   HINT 2: the linux module includes both functions and constants!
     #           e.g. linux.CLONE_NEWNS
-
+   try:
+       linux.unshare(linux.CLONE_NEWNS)  # create a new mount namespace
+   except RuntimeError as e:
+       if getattr(e, 'args', '') == (1, 'Operation not permitted'):
+            print('Error: Use of CLONE_NEWNS with unshare(2) requires the '
+                  'CAP_SYS_ADMIN capability (i.e. you probably want to retry '
+                  'this with sudo)')
+        raise e
+    linux.mount(None, "/", None, linux.MS_REC | linux.MS_PRIVATE)
     # TODO: remember shared subtrees?
     # (https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt)
     # Make / a private mount to avoid littering our host mount table.
